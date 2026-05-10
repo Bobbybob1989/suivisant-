@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Daily Score Tracker</title>
+  <style>
+    :root {
+      --bg: #0f0f13; --surface: #1a1a24; --surface2: #22222f;
+      --border: #2e2e3e; --accent: #7c6af7; --accent2: #5eead4;
+      --text: #e8e8f0; --text-muted: #7a7a9a; --green: #4ade80;
+      --yellow: #facc15; --orange: #fb923c; --red: #f87171;
+      --radius: 16px; --radius-sm: 10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 80px; }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; position: sticky; top: 0; z-index: 100; }
+    .header-inner { max-width: 720px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-size: 1.2rem; font-weight: 700; }
+    .date-display { font-size: 0.85rem; color: var(--text-muted); }
+    .score-banner { max-width: 720px; margin: 24px auto 0; padding: 24px; display: flex; align-items: center; gap: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+    .score-circle { width: 90px; height: 90px; border-radius: 50%; border: 4px solid var(--accent); display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; transition: border-color 0.4s; }
+    .score-number { font-size: 1.5rem; font-weight: 800; line-height: 1; }
+    .score-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; }
+    .score-info { flex: 1; }
+    .score-level { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; }
+    .score-sub { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px; }
+    .score-bar-wrap { background: var(--border); border-radius: 99px; height: 8px; overflow: hidden; }
+    .score-bar { height: 100%; border-radius: 99px; background: var(--accent); width: 0%; transition: width 0.5s ease, background 0.4s; }
+    main { max-width: 720px; margin: 20px auto 0; padding: 0 16px; display: flex; flex-direction: column; gap: 16px; }
+    .module-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color 0.3s; }
+    .module-card.complete { border-color: var(--green); }
+    .module-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; cursor: pointer; user-select: none; }
+    .module-header-left { display: flex; align-items: center; gap: 12px; }
+    .module-icon { font-size: 1.4rem; }
+    .module-title { font-size: 1rem; font-weight: 700; }
+    .module-subtitle { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+    .module-score-badge { background: var(--surface2); border: 1px solid var(--border); border-radius: 99px; padding: 4px 12px; font-size: 0.8rem; font-weight: 700; }
+    .module-chevron { color: var(--text-muted); font-size: 0.8rem; margin-left: 8px; transition: transform 0.3s; }
+    .module-card.open .module-chevron { transform: rotate(180deg); }
+    .module-body { display: none; padding: 0 20px 20px; border-top: 1px solid var(--border); }
+    .module-card.open .module-body { display: block; }
+    .item-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+    .item-row { display: flex; align-items: center; gap: 14px; padding: 12px 14px; background: var(--surface2); border-radius: var(--radius-sm); cursor: pointer; transition: background 0.2s, transform 0.1s; border: 1px solid transparent; }
+    .item-row:hover { background: #2a2a3a; }
+    .item-row:active { transform: scale(0.98); }
+    .item-row.checked { border-color: var(--accent); background: rgba(124,106,247,0.1); }
+    .custom-checkbox { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; font-size: 0.75rem; }
+    .item-row.checked .custom-checkbox { background: var(--accent); border-color: var(--accent); }
+    .item-text { flex: 1; font-size: 0.88rem; }
+    .item-points { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
+    .item-row.checked .item-points { color: var(--accent); }
+    .module-progress-wrap { margin-top: 14px; background: var(--border); border-radius: 99px; height: 6px; overflow: hidden; }
+    .module-progress-bar { height: 100%; border-radius: 99px; background: var(--accent); transition: width 0.4s ease; }
+    footer { max-width: 720px; margin: 32px auto 0; padding: 0 16px; text-align: center; }
+    .btn-reset { background: var(--surface2); border: 1px solid var(--border); color: var(--text-muted); padding: 10px 24px; border-radius: 99px; cursor: pointer; font-size: 0.85rem; transition: all 0.2s; }
+    .btn-reset:hover { border-color: var(--red); color: var(--red); }
+    .footer-note { font-size: 0.72rem; color: var(--text-muted); margin-top: 10px; }
+    .level-excellent .score-circle { border-color: var(--green); }
+    .level-excellent .score-bar { background: var(--green); }
+    .level-excellent .score-level { color: var(--green); }
+    .level-solid .score-circle { border-color: var(--accent2); }
+    .level-solid .score-bar { background: var(--accent2); }
+    .level-solid .score-level { color: var(--accent2); }
+    .level-correct .score-circle { border-color: var(--yellow); }
+    .level-correct .score-bar { background: var(--yellow); }
+    .level-correct .score-level { color: var(--yellow); }
+    .level-difficult .score-circle { border-color: var(--red); }
+    .level-difficult .score-bar { background: var(--red); }
+    .level-difficult .score-level { color: var(--red); }
+    @media (max-width: 500px) { .score-banner { flex-direction: column; text-align: center; } .score-info { width: 100%; } }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-inner">
+      <div class="logo">⚡ Daily Score</div>
+      <div class="date-display" id="dateDisplay"></div>
+    </div>
+  </header>
+
+  <div class="score-banner" id="scoreBanner">
+    <div class="score-circle" id="scoreCircle">
+      <span class="score-number" id="scoreNumber">0%</span>
+      <span class="score-label">Score</span>
+    </div>
+    <div class="score-info">
+      <div class="score-level" id="scoreLevel">—</div>
+      <div class="score-sub" id="scoreSub">Commence à cocher tes habitudes</div>
+      <div class="score-bar-wrap">
+        <div class="score-bar" id="scoreBar"></div>
+      </div>
+    </div>
+  </div>
+
+  <main id="modulesContainer"></main>
+
+  <footer>
+    <button class="btn-reset" onclick="resetDay()">🔄 Réinitialiser la journée</button>
+    <p class="footer-note">Les données sont sauvegardées localement dans ton navigateur.</p>
+  </footer>
+
+  <script>
+  // =============================================
+  // MODULES — Ajoute / retire des blocs ici
+  // =============================================
+  const MODULES = [
+
+    // ── 1. SOMMEIL
+    {
+      id: "sommeil", icon: "🌙", title: "Sommeil",
+      subtitle: "Coucher fixe · 8h · Pas d'écrans · Repas 4h avant",
+      items: [
+        { id: "s1", label: "Coucher et réveil à heures fixes (±30 min)", points: 5 },
+        { id: "s2", label: "8h de sommeil minimum", points: 5 },
+        { id: "s3", label: "Écrans coupés 1h avant le coucher", points: 5 },
+        { id: "s4", label: "Dernier repas 4h avant le coucher", points: 5 },
+      ]
+    },
+
+    // ── 2. SPORT
+    {
+      id: "sport", icon: "🏋️", title: "Sport",
+      subtitle: "Entraînement · Intensité · Récupération active",
+      items: [
+        { id: "sp1", label: "Entraînement fait (muscu ou cardio)", points: 10 },
+        { id: "sp2", label: "Intensité suffisante (essoufflement ou charges)", points: 10 },
+        { id: "sp3", label: "Récupération active (marche, mobilité)", points: 10 },
+      ]
+    },
+
+    // ══ 👉 INSÈRE UN NOUVEAU MODULE ICI ══
+    // Exemple :
+    // {
+    //   id: "discipline", icon: "🎯", title: "Discipline",
+    //   subtitle: "Organisation · Tâches · Focus",
+    //   items: [
+    //     { id: "d1", label: "Tâche prioritaire accomplie", points: 5 },
+    //     { id: "d2", label: "Boîte mail traitée", points: 5 },
+    //   ]
+    // },
+
+    // ── 3. NUTRITION
+    {
+      id: "nutrition", icon: "🍽️", title: "Nutrition",
+      subtitle: "Protéines · Légumes · Huile d'olive · Eau · Dîner tôt",
+      items: [
+        { id: "n1", label: "3 repas protéinés dans la journée", points: 7 },
+        { id: "n2", label: "Légumes à 2 repas minimum", points: 7 },
+        { id: "n3", label: "Huile d'olive à tous les repas", points: 7 },
+        { id: "n4", label: "Dîner 4h avant le coucher", points: 7 },
+        { id: "n5", label: "2,5 L d'eau dans la journée", points: 7 },
+      ]
+    },
+
+    // ── 4. BONUS
+    {
+      id: "bonus", icon: "⭐", title: "Bonus",
+      subtitle: "Alcool · Sucre · Lumière · Thermique · Écrans",
+      items: [
+        { id: "b1", label: "Pas d'alcool aujourd'hui", points: 3 },
+        { id: "b2", label: "Pas de sucre ajouté", points: 3 },
+        { id: "b3", label: "Exposition lumière vive matinale 20-30 min", points: 3 },
+        { id: "b4", label: "Récupération thermique (sauna / douche froide)", points: 3 },
+        { id: "b5", label: "Écrans coupés 1h avant le coucher", points: 3 },
+      ]
+    },
+
+  ];
+
+  // =============================================
+  // MOTEUR — Ne pas modifier
+  // =============================================
+  function todayKey() { return "dst_" + new Date().toISOString().slice(0, 10); }
+  function loadState() { const r = localStorage.getItem(todayKey()); return r ? JSON.parse(r) : {}; }
+  function saveState(s) { localStorage.setItem(todayKey(), JSON.stringify(s)); }
+  function formatDate() {
+    return new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  }
+  function computeScore(state) {
+    let total = 0, earned = 0;
+    MODULES.forEach(mod => mod.items.forEach(item => { total += item.points; if (state[item.id]) earned += item.points; }));
+    return total === 0 ? 0 : Math.round((earned / total) * 100);
+  }
+  function getLevel(score) {
+    if (score >= 85) return { cls: "level-excellent", label: "🏆 Journée EXCELLENTE", sub: "Âge biologique qui baisse — continue !" };
+    if (score >= 70) return { cls: "level-solid",     label: "💪 Journée SOLIDE",     sub: "Maintenance optimale — très bien !" };
+    if (score >= 50) return { cls: "level-correct",   label: "✅ Journée CORRECTE",   sub: "Pas de régression — continue demain !" };
+    return               { cls: "level-difficult",  label: "⚠️ Journée DIFFICILE",  sub: "Rattrape-toi demain, tu peux le faire !" };
+  }
+  function updateScoreBanner(score) {
+    document.getElementById("scoreNumber").textContent = score + "%";
+    document.getElementById("scoreBar").style.width = score + "%";
+    const lv = getLevel(score);
+    document.getElementById("scoreBanner").className = "score-banner " + lv.cls;
+    document.getElementById("scoreLevel").textContent = lv.label;
+    document.getElementById("scoreSub").textContent = lv.sub;
+  }
+  function updateModuleUI(modId) {
+    const state = loadState();
+    const mod = MODULES.find(m => m.id === modId);
+    if (!mod) return;
+    let total = 0, earned = 0;
+    mod.items.forEach(i => { total += i.points; if (state[i.id]) earned += i.points; });
+    const pct = total === 0 ? 0 : Math.round((earned / total) * 100);
+    const badge = document.getElementById("badge_" + modId);
+    const bar   = document.getElementById("bar_"   + modId);
+    const card  = document.getElementById("card_"  + modId);
+    if (badge) badge.textContent = pct + "% (" + earned + "/" + total + " pts)";
+    if (bar)   bar.style.width   = pct + "%";
+    if (card)  card.classList.toggle("complete", pct === 100);
+  }
+  function toggleItem(itemId, modId) {
+    const state = loadState();
+    state[itemId] = !state[itemId];
+    saveState(state);
+    const row = document.getElementById("row_" + itemId);
+    const chk = document.getElementById("chk_" + itemId);
+    if (row) row.classList.toggle("checked", !!state[itemId]);
+    if (chk) chk.textContent = state[itemId] ? "✓" : "";
+    updateModuleUI(modId);
+    updateScoreBanner(computeScore(state));
+  }
+  function toggleModule(modId) {
+    const card = document.getElementById("card_" + modId);
+    if (card) card.classList.toggle("open");
+  }
+  function resetDay() {
+    if (!confirm("Réinitialiser toutes les cases de la journée ?")) return;
+    localStorage.removeItem(todayKey());
+    renderAll();
+  }
+  function buildModuleHTML(mod, state) {
+    const itemsHTML = mod.items.map(item => {
+      const checked = !!state[item.id];
+      return '<div class="item-row ' + (checked ? "checked" : "") + '" id="row_' + item.id + '" onclick="toggleItem(\''+ item.id +'\', \''+ mod.id +'\')">' +
+        '<div class="custom-checkbox" id="chk_' + item.id + '">' + (checked ? "✓" : "") + '</div>' +
+        '<span class="item-text">' + item.label + '</span>' +
+        '<span class="item-points">+' + item.points + ' pts</span>' +
+        '</div>';
+    }).join("");
+    let total = 0, earned = 0;
+    mod.items.forEach(i => { total += i.points; if (state[i.id]) earned += i.points; });
+    const pct = total === 0 ? 0 : Math.round((earned / total) * 100);
+    return '<div class="module-card ' + (pct === 100 ? "complete" : "") + '" id="card_' + mod.id + '">' +
+      '<div class="module-header" onclick="toggleModule(\''+ mod.id +'\')">' +
+        '<div class="module-header-left">' +
+          '<span class="module-icon">' + mod.icon + '</span>' +
+          '<div><div class="module-title">' + mod.title + '</div><div class="module-subtitle">' + mod.subtitle + '</div></div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:8px">' +
+          '<span class="module-score-badge" id="badge_' + mod.id + '">' + pct + '% (' + earned + '/' + total + ' pts)</span>' +
+          '<span class="module-chevron">▼</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="module-body">' +
+        '<div class="module-progress-wrap"><div class="module-progress-bar" id="bar_' + mod.id + '" style="width:' + pct + '%"></div></div>' +
+        '<div class="item-list">' + itemsHTML + '</div>' +
+      '</div>' +
+    '</div>';
+  }
+  function renderAll() {
+    const state = loadState();
+    document.getElementById("modulesContainer").innerHTML = MODULES.map(mod => buildModuleHTML(mod, state)).join("");
+    updateScoreBanner(computeScore(state));
+    document.getElementById("dateDisplay").textContent = formatDate();
+  }
+  document.addEventListener("DOMContentLoaded", renderAll);
+  </script>
+</body>
+</html>
