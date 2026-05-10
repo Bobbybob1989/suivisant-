@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Daily Score Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg:#0f0f13;--surface:#1a1a24;--surface2:#22222f;--border:#2e2e3e;
+      --accent:#7c6af7;--accent2:#5eead4;--text:#e8e8f0;--text-muted:#7a7a9a;
+      --green:#4ade80;--yellow:#facc15;--red:#f87171;--radius:16px;--radius-sm:10px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:80px;}
+    header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 24px;position:sticky;top:0;z-index:100;}
+    .header-inner{max-width:720px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;}
+    .logo{font-size:1.2rem;font-weight:700;}
+    .date-display{font-size:0.85rem;color:var(--text-muted);}
+    .tabs{max-width:720px;margin:20px auto 0;padding:0 16px;display:flex;gap:8px;}
+    .tab-btn{flex:1;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-muted);font-size:0.85rem;font-weight:600;cursor:pointer;transition:all 0.2s;text-align:center;}
+    .tab-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+    .tab-content{display:none;}
+    .tab-content.active{display:block;}
+    .score-banner{max-width:720px;margin:20px auto 0;padding:24px;display:flex;align-items:center;gap:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);}
+    .score-circle{width:90px;height:90px;border-radius:50%;border:4px solid var(--accent);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;transition:border-color 0.4s;}
+    .score-number{font-size:1.5rem;font-weight:800;line-height:1;}
+    .score-label{font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;}
+    .score-info{flex:1;}
+    .score-level{font-size:1.1rem;font-weight:700;margin-bottom:4px;}
+    .score-sub{font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;}
+    .score-bar-wrap{background:var(--border);border-radius:99px;height:8px;overflow:hidden;}
+    .score-bar{height:100%;border-radius:99px;background:var(--accent);width:0%;transition:width 0.5s ease,background 0.4s;}
+    main{max-width:720px;margin:20px auto 0;padding:0 16px;display:flex;flex-direction:column;gap:16px;}
+    .module-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color 0.3s;}
+    .module-card.complete{border-color:var(--green);}
+    .module-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;cursor:pointer;user-select:none;}
+    .module-header-left{display:flex;align-items:center;gap:12px;}
+    .module-icon{font-size:1.4rem;}
+    .module-title{font-size:1rem;font-weight:700;}
+    .module-subtitle{font-size:0.75rem;color:var(--text-muted);margin-top:2px;}
+    .module-score-badge{background:var(--surface2);border:1px solid var(--border);border-radius:99px;padding:4px 12px;font-size:0.8rem;font-weight:700;}
+    .module-chevron{color:var(--text-muted);font-size:0.8rem;margin-left:8px;transition:transform 0.3s;}
+    .module-card.open .module-chevron{transform:rotate(180deg);}
+    .module-body{display:none;padding:0 20px 20px;border-top:1px solid var(--border);}
+    .module-card.open .module-body{display:block;}
+    .item-list{display:flex;flex-direction:column;gap:10px;margin-top:16px;}
+    .item-row{display:flex;align-items:center;gap:14px;padding:12px 14px;background:var(--surface2);border-radius:var(--radius-sm);cursor:pointer;transition:background 0.2s,transform 0.1s;border:1px solid transparent;}
+    .item-row:hover{background:#2a2a3a;}
+    .item-row.checked{border-color:var(--accent);background:rgba(124,106,247,0.1);}
+    .custom-checkbox{width:22px;height:22px;border-radius:6px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;font-size:0.75rem;}
+    .item-row.checked .custom-checkbox{background:var(--accent);border-color:var(--accent);}
+    .item-text{flex:1;font-size:0.88rem;}
+    .item-points{font-size:0.75rem;color:var(--text-muted);font-weight:600;}
+    .item-row.checked .item-points{color:var(--accent);}
+    .module-progress-wrap{margin-top:14px;background:var(--border);border-radius:99px;height:6px;overflow:hidden;}
+    .module-progress-bar{height:100%;border-radius:99px;background:var(--accent);transition:width 0.4s ease;}
+    .history-section{max-width:720px;margin:20px auto 0;padding:0 16px;display:flex;flex-direction:column;gap:16px;}
+    .history-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;}
+    .history-card h3{font-size:1rem;font-weight:700;margin-bottom:16px;}
+    .chart-container{position:relative;height:260px;}
+    .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+    .stat-box{background:var(--surface2);border-radius:var(--radius-sm);padding:14px;text-align:center;}
+    .stat-value{font-size:1.4rem;font-weight:800;color:var(--accent);}
+    .stat-label{font-size:0.72rem;color:var(--text-muted);margin-top:4px;}
+    .history-table{width:100%;border-collapse:collapse;font-size:0.82rem;}
+    .history-table th{text-align:left;color:var(--text-muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--border);}
+    .history-table td{padding:10px;border-bottom:1px solid var(--border);}
+    .history-table tr:last-child td{border-bottom:none;}
+    .level-badge{padding:3px 10px;border-radius:99px;font-size:0.72rem;font-weight:700;}
+    .badge-excellent{background:rgba(74,222,128,0.15);color:var(--green);}
+    .badge-solid{background:rgba(94,234,212,0.15);color:var(--accent2);}
+    .badge-correct{background:rgba(250,204,21,0.15);color:var(--yellow);}
+    .badge-difficult{background:rgba(248,113,113,0.15);color:var(--red);}
+    .empty-history{text-align:center;color:var(--text-muted);padding:40px 0;font-size:0.9rem;}
+    footer{max-width:720px;margin:32px auto 0;padding:0 16px;text-align:center;}
+    .btn-reset{background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);padding:10px 24px;border-radius:99px;cursor:pointer;font-size:0.85rem;transition:all 0.2s;}
+    .btn-reset:hover{border-color:var(--red);color:var(--red);}
+    .footer-note{font-size:0.72rem;color:var(--text-muted);margin-top:10px;}
+    .level-excellent .score-circle{border-color:var(--green);}
+    .level-excellent .score-bar{background:var(--green);}
+    .level-excellent .score-level{color:var(--green);}
+    .level-solid .score-circle{border-color:var(--accent2);}
+    .level-solid .score-bar{background:var(--accent2);}
+    .level-solid .score-level{color:var(--accent2);}
+    .level-correct .score-circle{border-color:var(--yellow);}
+    .level-correct .score-bar{background:var(--yellow);}
+    .level-correct .score-level{color:var(--yellow);}
+    .level-difficult .score-circle{border-color:var(--red);}
+    .level-difficult .score-bar{background:var(--red);}
+    .level-difficult .score-level{color:var(--red);}
+    @media(max-width:500px){.score-banner{flex-direction:column;text-align:center;}.score-info{width:100%;}}
+  </style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="logo">⚡ Daily Score</div>
+    <div class="date-display" id="dateDisplay"></div>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab-btn active" id="btn-today" onclick="switchTab('today')">📋 Aujourd'hui</div>
+  <div class="tab-btn" id="btn-history" onclick="switchTab('history')">📈 Historique</div>
+</div>
+
+<div id="tab-today" class="tab-content active">
+  <div class="score-banner" id="scoreBanner">
+    <div class="score-circle">
+      <span class="score-number" id="scoreNumber">0%</span>
+      <span class="score-label">Score</span>
+    </div>
+    <div class="score-info">
+      <div class="score-level" id="scoreLevel">—</div>
+      <div class="score-sub" id="scoreSub">Commence à cocher tes habitudes</div>
+      <div class="score-bar-wrap"><div class="score-bar" id="scoreBar"></div></div>
+    </div>
+  </div>
+  <main id="modulesContainer"></main>
+  <footer>
+    <button class="btn-reset" onclick="resetDay()">🔄 Réinitialiser la journée</button>
+    <p class="footer-note">Données sauvegardées localement dans ton navigateur.</p>
+  </footer>
+</div>
+
+<div id="tab-history" class="tab-content">
+  <div class="history-section">
+    <div class="history-card">
+      <h3>📊 Résumé — 90 derniers jours</h3>
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-value" id="statDays">0</div><div class="stat-label">Jours trackés</div></div>
+        <div class="stat-box"><div class="stat-value" id="statAvg">—</div><div class="stat-label">Score moyen</div></div>
+        <div class="stat-box"><div class="stat-value" id="statBest">—</div><div class="stat-label">Meilleur jour</div></div>
+      </div>
+    </div>
+    <div class="history-card">
+      <h3>📈 Évolution du score</h3>
+      <div class="chart-container"><canvas id="historyChart"></canvas></div>
+    </div>
+    <div class="history-card">
+      <h3>🗓️ Détail par jour</h3>
+      <div id="historyTableContainer"></div>
+    </div>
+  </div>
+</div>
+<script>
+const MODULES = [
+  {id:"sommeil", icon:"🌙", title:"Sommeil", subtitle:"Coucher fixe · 8h · Pas d'écrans · Repas 4h avant", items:[
+    {id:"s1", label:"Coucher et réveil à heures fixes (±30 min)", points:5},
+    {id:"s2", label:"7h de sommeil minimum", points:5},
+    {id:"s3", label:"Écrans coupés 1h avant le coucher", points:5},
+    {id:"s4", label:"Dernier repas 4h avant le coucher", points:5}
+  ]},
+  {id:"sport", icon:"🏋️", title:"Sport", subtitle:"Entraînement · Intensité · Récupération active", items:[
+    {id:"sp1", label:"Entraînement fait (muscu ou cardio)", points:10},
+    {id:"sp2", label:"Intensité suffisante (essoufflement ou charges)", points:10},
+    {id:"sp3", label:"Récupération active (marche, mobilité)", points:10}
+  ]},
+  {id:"nutrition", icon:"🍽️", title:"Nutrition", subtitle:"Protéines · Légumes · Huile d'olive · Eau · Dîner tôt", items:[
+    {id:"n1", label:"3 repas protéinés dans la journée", points:7},
+    {id:"n2", label:"Légumes à 2 repas minimum", points:7},
+    {id:"n3", label:"Huile d'olive à tous les repas", points:7},
+    {id:"n4", label:"Dîner 4h avant le coucher", points:7},
+    {id:"n5", label:"2,5 L d'eau dans la journée", points:7}
+  ]},
+  {id:"bonus", icon:"⭐", title:"Bonus", subtitle:"Alcool · Sucre · Lumière · Thermique · Écrans", items:[
+    {id:"b1", label:"Pas d'alcool aujourd'hui", points:3},
+    {id:"b2", label:"Pas de sucre ajouté", points:3},
+    {id:"b3", label:"Exposition lumière vive matinale 20-30 min", points:3},
+    {id:"b4", label:"Récupération thermique (sauna / douche froide)", points:3},
+    {id:"b5", label:"Écrans coupés 1h avant le coucher", points:3}
+  ]}
+];
+
+var chartInstance = null;
+
+function switchTab(tab) {
+  document.querySelectorAll(".tab-content").forEach(function(el){el.classList.remove("active");});
+  document.querySelectorAll(".tab-btn").forEach(function(el){el.classList.remove("active");});
+  document.getElementById("tab-"+tab).classList.add("active");
+  document.getElementById("btn-"+tab).classList.add("active");
+  if(tab==="history") renderHistory();
+}
+
+function todayKey(){return "dst_"+new Date().toISOString().slice(0,10);}
+function loadState(){var r=localStorage.getItem(todayKey());return r?JSON.parse(r):{};}
+function saveState(s){localStorage.setItem(todayKey(),JSON.stringify(s));}
+function formatDate(){return new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});}
+
+function computeScore(state){
+  var total=0,earned=0;
+  MODULES.forEach(function(mod){mod.items.forEach(function(item){total+=item.points;if(state[item.id])earned+=item.points;});});
+  return total===0?0:Math.round((earned/total)*100);
+}
+
+function getLevel(score){
+  if(score>=85) return{cls:"level-excellent",label:"🏆 Journée EXCELLENTE",sub:"Âge biologique qui baisse — continue !",badge:"excellent",bl:"Excellent"};
+  if(score>=70) return{cls:"level-solid",    label:"💪 Journée SOLIDE",    sub:"Maintenance optimale — très bien !",   badge:"solid",    bl:"Solide"};
+  if(score>=50) return{cls:"level-correct",  label:"✅ Journée CORRECTE",  sub:"Pas de régression — continue demain !",badge:"correct",  bl:"Correct"};
+  return              {cls:"level-difficult", label:"⚠️ Journée DIFFICILE", sub:"Rattrape-toi demain, tu peux le faire !",badge:"difficult",bl:"Difficile"};
+}
+
+function updateScoreBanner(score){
+  document.getElementById("scoreNumber").textContent=score+"%";
+  document.getElementById("scoreBar").style.width=score+"%";
+  var lv=getLevel(score);
+  document.getElementById("scoreBanner").className="score-banner "+lv.cls;
+  document.getElementById("scoreLevel").textContent=lv.label;
+  document.getElementById("scoreSub").textContent=lv.sub;
+}
+
+function updateModuleUI(modId){
+  var state=loadState();
+  var mod=MODULES.find(function(m){return m.id===modId;});
+  if(!mod)return;
+  var total=0,earned=0;
+  mod.items.forEach(function(i){total+=i.points;if(state[i.id])earned+=i.points;});
+  var pct=total===0?0:Math.round((earned/total)*100);
+  var badge=document.getElementById("badge_"+modId);
+  var bar=document.getElementById("bar_"+modId);
+  var card=document.getElementById("card_"+modId);
+  if(badge)badge.textContent=pct+"% ("+earned+"/"+total+" pts)";
+  if(bar)bar.style.width=pct+"%";
+  if(card)card.classList.toggle("complete",pct===100);
+}
+
+function toggleItem(itemId,modId){
+  var state=loadState();
+  state[itemId]=!state[itemId];
+  saveState(state);
+  var row=document.getElementById("row_"+itemId);
+  var chk=document.getElementById("chk_"+itemId);
+  if(row)row.classList.toggle("checked",!!state[itemId]);
+  if(chk)chk.textContent=state[itemId]?"✓":"";
+  updateModuleUI(modId);
+  updateScoreBanner(computeScore(state));
+}
+
+function toggleModule(modId){
+  var card=document.getElementById("card_"+modId);
+  if(card)card.classList.toggle("open");
+}
+
+function resetDay(){
+  if(!confirm("Réinitialiser toutes les cases de la journée ?"))return;
+  localStorage.removeItem(todayKey());
+  renderAll();
+}
+
+function buildModuleHTML(mod,state){
+  var total=0,earned=0;
+  mod.items.forEach(function(i){total+=i.points;if(state[i.id])earned+=i.points;});
+  var pct=total===0?0:Math.round((earned/total)*100);
+  var itemsHTML=mod.items.map(function(item){
+    var checked=!!state[item.id];
+    return '<div class="item-row'+(checked?" checked":"")
+      +'" id="row_'+item.id+'" onclick="toggleItem(\''+item.id+'\',\''+mod.id+'\')">'
+      +'<div class="custom-checkbox" id="chk_'+item.id+'">'+(checked?"✓":"")+'</div>'
+      +'<span class="item-text">'+item.label+'</span>'
+      +'<span class="item-points">+'+item.points+' pts</span>'
+      +'</div>';
+  }).join("");
+  return '<div class="module-card'+(pct===100?" complete":"")
+    +'" id="card_'+mod.id+'">'
+    +'<div class="module-header" onclick="toggleModule(\''+mod.id+'\')">'
+    +'<div class="module-header-left">'
+    +'<span class="module-icon">'+mod.icon+'</span>'
+    +'<div><div class="module-title">'+mod.title+'</div>'
+    +'<div class="module-subtitle">'+mod.subtitle+'</div></div>'
+    +'</div>'
+    +'<div style="display:flex;align-items:center;gap:8px">'
+    +'<span class="module-score-badge" id="badge_'+mod.id+'">'+pct+'% ('+earned+'/'+total+' pts)</span>'
+    +'<span class="module-chevron">▼</span>'
+    +'</div></div>'
+    +'<div class="module-body">'
+    +'<div class="module-progress-wrap"><div class="module-progress-bar" id="bar_'+mod.id+'" style="width:'+pct+'%"></div></div>'
+    +'<div class="item-list">'+itemsHTML+'</div>'
+    +'</div></div>';
+}
+
+function renderAll(){
+  var state=loadState();
+  document.getElementById("modulesContainer").innerHTML=MODULES.map(function(mod){return buildModuleHTML(mod,state);}).join("");
+  updateScoreBanner(computeScore(state));
+  document.getElementById("dateDisplay").textContent=formatDate();
+}
+
+function getHistoryData(){
+  var days=[];
+  var now=new Date();
+  for(var i=89;i>=0;i--){
+    var d=new Date(now);
+    d.setDate(d.getDate()-i);
+    var key="dst_"+d.toISOString().slice(0,10);
+    var raw=localStorage.getItem(key);
+    if(raw){
+      var state=JSON.parse(raw);
+      var score=computeScore(state);
+      days.push({date:d,key:key,score:score});
+    }
+  }
+  return days;
+}
+
+function renderHistory(){
+  var days=getHistoryData();
+  if(days.length===0){
+    document.getElementById("statDays").textContent="0";
+    document.getElementById("statAvg").textContent="—";
+    document.getElementById("statBest").textContent="—";
+    document.getElementById("historyTableContainer").innerHTML='<p class="empty-history">Aucune donnée encore.<br>Commence à tracker aujourd\'hui !</p>';
+    if(chartInstance){chartInstance.destroy();chartInstance=null;}
+    return;
+  }
+  var total=days.reduce(function(a,b){return a+b.score;},0);
+  var avg=Math.round(total/days.length);
+  var best=Math.max.apply(null,days.map(function(d){return d.score;}));
+  document.getElementById("statDays").textContent=days.length;
+  document.getElementById("statAvg").textContent=avg+"%";
+  document.getElementById("statBest").textContent=best+"%";
+
+  var labels=days.map(function(d){return d.date.toLocaleDateString("fr-FR",{day:"numeric",month:"short"});});
+  var scores=days.map(function(d){return d.score;});
+  var colors=scores.map(function(s){
+    if(s>=85)return"#4ade80";
+    if(s>=70)return"#5eead4";
+    if(s>=50)return"#facc15";
+    return"#f87171";
+  });
+
+  if(chartInstance)chartInstance.destroy();
+  var ctx=document.getElementById("historyChart").getContext("2d");
+  chartInstance=new Chart(ctx,{
+    type:"bar",
+    data:{
+      labels:labels,
+      datasets:[{
+        label:"Score %",
+        data:scores,
+        backgroundColor:colors,
+        borderRadius:6,
+        borderSkipped:false
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.y+"%";}}}},
+      scales:{
+        x:{ticks:{color:"#7a7a9a",font:{size:10}},grid:{color:"#2e2e3e"}},
+        y:{min:0,max:100,ticks:{color:"#7a7a9a",callback:function(v){return v+"%";}},grid:{color:"#2e2e3e"}}
+      }
+    }
+  });
+
+  var rows=days.slice().reverse().map(function(d){
+    var lv=getLevel(d.score);
+    var dateStr=d.date.toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"});
+    return '<tr><td>'+dateStr+'</td><td style="font-weight:700">'+d.score+'%</td>'
+      +'<td><span class="level-badge badge-'+lv.badge+'">'+lv.bl+'</span></td></tr>';
+  }).join("");
+  document.getElementById("historyTableContainer").innerHTML=
+    '<table class="history-table"><thead><tr><th>Date</th><th>Score</th><th>Niveau</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+
+document.addEventListener("DOMContentLoaded",renderAll);
+</script>
+</body>
+</html>
